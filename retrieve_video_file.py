@@ -5,15 +5,6 @@ import csv
 
 
 
-class Point:
-    def __init__(self, x_coordinate=None, y_coordinate=None, time=None, frame_number=None):
-        self.x_coordinate = x_coordinate
-        self.y_coordinate = y_coordinate
-        self.time = time
-        self.frame_number = frame_number
-
-
-
 #THRESHOLD
 #if the mice is between these two thresholds it will mask it to white
 def retrieve_info_from_video():
@@ -32,51 +23,52 @@ def retrieve_info_from_video():
     while True:
         #grabbed if the next frame was recieved or not. Frame will contain the next frame
         (grabbed, frame) = video.read()
-        time = int(video.get(cv2.CAP_PROP_POS_MSEC))
-        print("time is {}".format(time))
+        time_at_current_frame = int(video.get(cv2.CAP_PROP_POS_MSEC))
+        frame_number_at_current_frame = int(video.get(cv2.CAP_PROP_POS_FRAMES))
         #if the frame was not grabbed
         if not grabbed:
             break 
-        #frame = cv2.GaussianBlur(frame, (11, 11), 0)
-        #frame = cv2.erode(frame, None, iterations=2)
-        #frame = cv2.dilate(frame, None, iterations=2)
+        frame = cv2.GaussianBlur(frame, (11, 11), 0)
+        frame = cv2.erode(frame, None, iterations=2)
+        frame = cv2.dilate(frame, None, iterations=2)
         mask =  cv2.inRange(frame, miceLower, miceUpper)
         params = cv2.SimpleBlobDetector_Params()
         params.filterByConvexity = True
-        params.minConvexity = 0.4
+        params.minConvexity = 0.7
         params.minThreshold = 200
         params.maxThreshold = 255
         params.filterByArea = True
         params.minArea = 300
         detector = cv2.SimpleBlobDetector_create(params)
         key_points = detector.detect(mask)
-        
         image_with_keypoints = cv2.drawKeypoints(mask, key_points, numpy.array([]))
-        cv2.imshow('image_with_keypoints', image_with_keypoints)        
+        cv2.imshow('image_with_keypoints', image_with_keypoints)
+        key_points.append(time_at_current_frame)
+        key_points.append(frame_number_at_current_frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         key_points_large.append(key_points)
+    print(key_points_large)
     create_or_edit_csv_file(key_points_large)
 
 
  
             
-def create_or_edit_csv_file(key_points):
+def create_or_edit_csv_file(frames):
     with open ('key_points2.csv', 'w+') as csv_file:
         file_stream_writer = csv.writer(csv_file)
-        print("key_points is {}".format(key_points))
-        print(type(key_points))
-        for key_point in key_points:
-            for x_and_y in key_point:
-                file_stream_writer.writerow(["{} {}".format(x_and_y.pt[0], x_and_y.pt[1])])
+        for frame in frames:
+            for key_point in frame[:-2]:
+                time_at_current_frame = frame[-2]
+                frame_number_at_current_frame = frame[-1]
+                x_coordinate = key_point.pt[0]
+                y_coordinate = key_point.pt[1]
+                file_stream_writer.writerow(["{} {} {} {}".format(x_coordinate, y_coordinate, time_at_current_frame, frame_number_at_current_frame)])
 
 
 
 
          
-a = Point()
-a.x_coordinate = 5
-a.y_coordinate = 10
 
 
 if __name__ == '__main__':
