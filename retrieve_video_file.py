@@ -1,5 +1,4 @@
 import numpy
-import imutils
 import cv2
 import csv
 
